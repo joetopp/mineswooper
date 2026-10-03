@@ -43,6 +43,13 @@ def test_render_board_includes_row_and_column_headers():
     assert lines[2] == "2 . . ."
 
 
+def test_render_board_marks_flagged_cells():
+    board = Board(rows=2, cols=3, mine_count=1)
+    lines = minesweeper._render_board(board, flags=[(0, 1)]).split("\n")
+    assert lines[1] == "1 . F ."
+    assert lines[2] == "2 . . ."
+
+
 @pytest.mark.parametrize(
     "raw, expected",
     [
@@ -57,6 +64,26 @@ def test_render_board_includes_row_and_column_headers():
 )
 def test_parse_move(raw, expected):
     assert minesweeper._parse_move(raw, rows=9, cols=9) == expected
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("1 1", (minesweeper.REVEAL, 0, 0)),
+        ("3 4", (minesweeper.REVEAL, 2, 3)),
+        ("f 1 1", (minesweeper.FLAG, 0, 0)),
+        ("F 3 4", (minesweeper.FLAG, 2, 3)),
+        ("c 3 4", (minesweeper.CHORD, 2, 3)),
+        ("f", None),
+        ("f 1", None),
+        ("f 1 2 3", None),
+        ("c 0 1", None),
+        ("c 10 1", None),
+        ("x 1 1", None),
+    ],
+)
+def test_parse_command(raw, expected):
+    assert minesweeper._parse_command(raw, rows=9, cols=9) == expected
 
 
 def test_play_wins_when_last_safe_cell_is_revealed(monkeypatch, capsys):
@@ -76,6 +103,29 @@ def test_play_reprompt_on_invalid_move_does_not_consume_a_turn(monkeypatch, caps
 
     output = capsys.readouterr().out
     assert output.count("Enter two numbers") == 2
+    assert "You win!" in output
+
+
+def test_play_flag_command_marks_the_cell_without_revealing_it(monkeypatch, capsys):
+    monkeypatch.setattr("mineswooper.board.random.sample", lambda population, k: [(0, 1)])
+    _feed_input(monkeypatch, ["1", "2", "1", "f 1 2", "1 1"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "1 . F" in output
+    assert "You win!" in output
+
+
+def test_play_chord_command_reveals_unflagged_neighbors_and_wins(monkeypatch, capsys):
+    monkeypatch.setattr("mineswooper.board.random.sample", lambda population, k: [(1, 1)])
+    _feed_input(monkeypatch, ["2", "2", "1", "1 1", "f 2 2", "c 1 1"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "1 1 1" in output
+    assert "2 1 F" in output
     assert "You win!" in output
 
 
@@ -100,3 +150,64 @@ def test_main_handles_eof_gracefully(monkeypatch, capsys):
 
     assert "Goodbye" in capsys.readouterr().out
 
+
+
+def test_play_reports_why_a_chord_was_rejected(monkeypatch, capsys):
+    monkeypatch.setattr("mineswooper.board.random.sample", lambda population, k: [(1, 1)])
+    _feed_input(monkeypatch, ["2", "2", "1", "1 1", "c 1 1", "f 2 2", "c 1 1"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "needs exactly 1 flag(s) around it, but there are 0" in output
+    assert "You win!" in output
+
+
+def test_play_reports_why_a_flag_was_rejected(monkeypatch, capsys):
+    monkeypatch.setattr("mineswooper.board.random.sample", lambda population, k: [(1, 1)])
+    _feed_input(monkeypatch, ["2", "2", "1", "1 1", "f 1 1", "f 2 2", "c 1 1"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "(1, 1) is already revealed, so it cannot be flagged." in output
+    assert "You win!" in output
+
+
+def test_play_reports_why_revealing_a_flagged_cell_was_rejected(monkeypatch, capsys):
+    monkeypatch.setattr("mineswooper.board.random.sample", lambda population, k: [(1, 1)])
+    _feed_input(monkeypatch, ["2", "2", "1", "1 1", "f 2 2", "2 2", "c 1 1"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "(2, 2) is flagged. Unflag it with 'f 2 2'." in output
+    assert "You win!" in output
+
+
+def test_play_stays_quiet_when_a_move_is_legal(monkeypatch, capsys):
+    monkeypatch.setattr("mineswooper.board.random.sample", lambda population, k: [(1, 1)])
+    _feed_input(monkeypatch, ["2", "2", "1", "1 1", "f 2 2", "c 1 1"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "already revealed" not in output
+    assert "needs exactly" not in output
+    assert "is flagged." not in output
+    assert "You win!" in output
+
+
+def test_play_reports_a_satisfied_chord_that_has_nothing_left_to_reveal(monkeypatch, capsys):
+    monkeypatch.setattr(
+        "mineswooper.board.random.sample", lambda population, k: [(0, 0), (0, 2)]
+    )
+    # (1, 2) is a 2 with both its mines flagged; the second chord is legal but finds
+    # every unflagged neighbor already uncovered.
+    _feed_input(monkeypatch, ["5", "5", "2", "1 2", "f 1 1", "f 1 3", "c 1 2", "c 1 2", "3 3"])
+
+    minesweeper.play()
+
+    output = capsys.readouterr().out
+    assert "Chording (1, 2) found nothing left to reveal." in output
+    assert "needs exactly" not in output

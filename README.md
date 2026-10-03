@@ -33,9 +33,12 @@ Mines [10]:
 Enter row col:
 ```
 
-Enter a move as `row col` (1-indexed), e.g. `3 4`. Your first move is always safe — mines are
-placed after it, never on the cell you picked. Reveal every non-mine cell to win; reveal a mine
-and the game ends. Press Ctrl+C or Ctrl+D at any prompt to quit.
+Enter a move as `row col` (1-indexed), e.g. `3 4`. Prefix it with `f` to toggle a flag on a
+covered cell (`f 3 4`, drawn as `F`), or with `c` to chord a revealed number whose neighboring
+flags already match it (`c 3 4`) — chording reveals that number's remaining neighbors, so a
+misplaced flag loses the game. Your first move is always safe — mines are placed after it, never
+on the cell you picked. Reveal every non-mine cell to win; reveal a mine and the game ends. Press
+Ctrl+C or Ctrl+D at any prompt to quit.
 
 ## Running the tests
 

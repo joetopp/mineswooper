@@ -8,7 +8,6 @@ def test_cell_defaults():
     assert cell.is_mine is False
     assert cell.revealed is False
     assert cell.adjacent_mines == 0
-    assert cell.flagged is False
 
 
 def test_board_starts_without_mines():
@@ -110,23 +109,6 @@ def test_render_reveal_all_shows_mines():
     assert board.render(reveal_all=True) == "* ."
 
 
-def test_render_shows_flagged_cells():
-    board = Board(rows=1, cols=2, mine_count=1)
-    board.grid[0][0].is_mine = True
-    board.grid[0][0].flagged = True
-    board.grid[0][1].flagged = True
-
-    assert board.render() == "F F"
-
-
-def test_render_reveal_all_shows_flagged_mine_as_mine_not_flag():
-    board = Board(rows=1, cols=2, mine_count=1)
-    board.grid[0][0].is_mine = True
-    board.grid[0][0].flagged = True
-
-    assert board.render(reveal_all=True) == "* ."
-
-
 def test_place_mines_is_idempotent():
     board = Board(rows=5, cols=5, mine_count=10)
     board.place_mines(exclude_row=2, exclude_col=2)
@@ -161,30 +143,6 @@ def test_reveal_returns_false_when_not_hitting_a_mine():
     assert board.reveal(1, 1) is False
 
 
-def test_reveal_skips_flagged_cells():
-    board = Board(rows=1, cols=2, mine_count=1)
-    board.grid[0][0].is_mine = True
-    board.grid[0][0].flagged = True
-    board.compute_adjacent_counts()
-
-    result = board.reveal(0, 0)
-
-    assert result is False
-    assert not board.grid[0][0].revealed
-
-
-def test_reveal_flood_fill_stops_at_flagged_cells():
-    board = Board(rows=1, cols=3, mine_count=0)
-    board.compute_adjacent_counts()
-    board.grid[0][1].flagged = True
-
-    board.reveal(0, 0)
-
-    assert board.grid[0][0].revealed
-    assert not board.grid[0][1].revealed
-    assert not board.grid[0][2].revealed
-
-
 def test_reveal_raises_value_error_out_of_bounds():
     board = Board(rows=3, cols=3, mine_count=1)
 
@@ -202,3 +160,14 @@ def test_in_bounds():
     assert board.in_bounds(2, 2)
     assert not board.in_bounds(3, 0)
     assert not board.in_bounds(0, -1)
+
+
+def test_neighbors_yields_in_bounds_coordinates_in_row_major_order():
+    board = Board(rows=3, cols=3, mine_count=1)
+
+    assert list(board.neighbors(1, 1)) == [
+        (0, 0), (0, 1), (0, 2),
+        (1, 0), (1, 2),
+        (2, 0), (2, 1), (2, 2),
+    ]
+    assert list(board.neighbors(0, 0)) == [(0, 1), (1, 0), (1, 1)]
