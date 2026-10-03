@@ -406,3 +406,20 @@ def test_a_flag_a_flood_fill_runs_over_is_dropped(monkeypatch):
     assert game.is_flagged(4, 4) is False
     assert game.mines_remaining == 3
     assert game.status is Status.PLAYING
+
+
+def test_chord_stops_revealing_at_the_first_mine_it_hits(monkeypatch):
+    game = _corner_game(monkeypatch)
+    # (1, 1) is a 2, so two flags satisfy it -- but both of these are wrong.
+    game.toggle_flag(1, 0)
+    game.toggle_flag(2, 0)
+
+    game.chord(1, 1)
+
+    assert game.status is Status.LOST
+    assert game.exploded == (0, 0)
+    assert game.board.grid[0][0].revealed is True
+    # Neighbors after (0, 0) in row-major order must stay covered rather than being
+    # flood-filled by a chord that has already lost.
+    for coord in [(0, 1), (1, 2), (2, 1), (2, 2)]:
+        assert game.board.grid[coord[0]][coord[1]].revealed is False, coord

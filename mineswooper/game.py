@@ -119,8 +119,7 @@ class Game:
             return
 
         self._start(row, col)
-        hit_mine = self.board.grid[row][col].is_mine
-        self.board.reveal(row, col)
+        hit_mine = self.board.reveal(row, col)
         self._drop_flags_on_revealed_cells()
 
         if hit_mine:
@@ -141,7 +140,8 @@ class Game:
         """Reveal the unflagged neighbors of a revealed number whose flag count already matches it.
 
         A wrong flag therefore uncovers a mine and loses the game. Neighbors are visited in
-        row-major order, so the recorded explosion is the topmost-leftmost mine that was hit.
+        row-major order and revealing stops at the first mine, so the explosion is recorded at
+        the topmost-leftmost mine and the rest of the board is left covered.
         """
         self._require_in_bounds(row, col)
         if self.status is not Status.PLAYING:
@@ -150,7 +150,7 @@ class Game:
         cell = self.board.grid[row][col]
         if not cell.revealed or cell.adjacent_mines == 0:
             return
-        neighbors = sorted(self.board._neighbors(row, col))
+        neighbors = list(self.board.neighbors(row, col))
         if sum(1 for neighbor in neighbors if neighbor in self._flags) != cell.adjacent_mines:
             return
 
@@ -158,9 +158,9 @@ class Game:
         for n_row, n_col in neighbors:
             if (n_row, n_col) in self._flags:
                 continue
-            if self.board.grid[n_row][n_col].is_mine and first_hit is None:
+            if self.board.reveal(n_row, n_col):
                 first_hit = (n_row, n_col)
-            self.board.reveal(n_row, n_col)
+                break
         self._drop_flags_on_revealed_cells()
 
         if first_hit is not None:

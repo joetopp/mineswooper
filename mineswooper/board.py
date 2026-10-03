@@ -9,7 +9,6 @@ class Cell:
     is_mine: bool = False
     revealed: bool = False
     adjacent_mines: int = 0
-    flagged: bool = False
 
 
 class Board:
@@ -28,7 +27,8 @@ class Board:
     def in_bounds(self, row: int, col: int) -> bool:
         return 0 <= row < self.rows and 0 <= col < self.cols
 
-    def _neighbors(self, row: int, col: int):
+    def neighbors(self, row: int, col: int):
+        """Yield the in-bounds neighbors of a cell in row-major order."""
         for d_row in (-1, 0, 1):
             for d_col in (-1, 0, 1):
                 if d_row == 0 and d_col == 0:
@@ -44,7 +44,7 @@ class Board:
                 if cell.is_mine:
                     continue
                 cell.adjacent_mines = sum(
-                    1 for n_row, n_col in self._neighbors(row, col) if self.grid[n_row][n_col].is_mine
+                    1 for n_row, n_col in self.neighbors(row, col) if self.grid[n_row][n_col].is_mine
                 )
 
     def place_mines(self, exclude_row: int, exclude_col: int) -> None:
@@ -71,14 +71,14 @@ class Board:
         while stack:
             r, c = stack.pop()
             cell = self.grid[r][c]
-            if cell.revealed or cell.flagged:
+            if cell.revealed:
                 continue
             cell.revealed = True
             if cell.is_mine:
                 hit_mine = True
                 continue
             if cell.adjacent_mines == 0:
-                for n_row, n_col in self._neighbors(r, c):
+                for n_row, n_col in self.neighbors(r, c):
                     if not self.grid[n_row][n_col].revealed:
                         stack.append((n_row, n_col))
         return hit_mine
@@ -93,8 +93,6 @@ class Board:
             for cell in row:
                 if cell.is_mine and (reveal_all or cell.revealed):
                     symbols.append("*")
-                elif cell.flagged:
-                    symbols.append("F")
                 elif cell.revealed:
                     symbols.append(" " if cell.adjacent_mines == 0 else str(cell.adjacent_mines))
                 else:
