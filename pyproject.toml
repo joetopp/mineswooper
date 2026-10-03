@@ -8,10 +8,13 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "fastapi (>=0.142.2,<0.143.0)",
+    "uvicorn (>=0.54.0,<0.55.0)"
 ]
 
 [project.scripts]
 minesweeper = "mineswooper.minesweeper:main"
+minesweeper-web = "mineswooper.web.server:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -19,5 +22,6 @@ build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "pytest (>=9.1.1,<10.0.0)"
+    "pytest (>=9.1.1,<10.0.0)",
+    "httpx (>=0.28.1,<0.29.0)"
 ]
