@@ -9,10 +9,13 @@ from mineswooper.board import Board
 
 # Opaque per-cell tokens used by to_dict(). A covered cell is always reported as COVERED or
 # FLAGGED, so a serialized snapshot of a game in progress can never leak where the mines are.
+# WRONG_FLAG is the one exception, and only after a loss, when the flags have already been
+# settled: it is the flag the player left on a cell that held no mine.
 COVERED = "covered"
 FLAGGED = "flagged"
 MINE = "mine"
 EXPLODED = "exploded"
+WRONG_FLAG = "wrong_flag"
 
 
 class Status(Enum):
@@ -225,7 +228,11 @@ class Game:
     def _token(self, row: int, col: int) -> str:
         cell = self.board.grid[row][col]
         if not cell.revealed:
-            return FLAGGED if (row, col) in self._flags else COVERED
+            if (row, col) not in self._flags:
+                return COVERED
+            # A lost game shows which flags were wrong, the way the original game crosses them
+            # out. Nothing leaks: the round is over, and a won game has no wrong flags.
+            return WRONG_FLAG if self.status is Status.LOST and not cell.is_mine else FLAGGED
         if cell.is_mine:
             return EXPLODED if (row, col) == self.exploded else MINE
         return str(cell.adjacent_mines)

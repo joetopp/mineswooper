@@ -3,7 +3,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from mineswooper.game import COVERED, EXPLODED, FLAGGED, MINE, Difficulty, Game
+from mineswooper.game import COVERED, EXPLODED, FLAGGED, MINE, WRONG_FLAG, Difficulty, Game
 from mineswooper.web import api, server
 
 STATE_KEYS = {
@@ -299,6 +299,17 @@ def test_losing_reports_the_explosion_and_the_mines(client, monkeypatch):
     assert payload["grid"][3][1] == MINE
 
 
+def test_a_loss_crosses_out_a_wrong_flag(client, monkeypatch):
+    _install_corner_game(monkeypatch)
+    client.post("/api/reveal", json={"row": 1, "col": 1})
+    client.post("/api/flag", json={"row": 4, "col": 4})
+
+    payload = client.post("/api/reveal", json={"row": 0, "col": 0}).json()
+
+    assert payload["status"] == "lost"
+    assert payload["grid"][4][4] == WRONG_FLAG
+
+
 def test_a_game_in_progress_never_reveals_a_mine(client, monkeypatch):
     _install_corner_game(monkeypatch)
 
@@ -337,6 +348,26 @@ def test_index_and_state_report_the_same_game(client, monkeypatch):
 
     assert index["grid"] == state["grid"]
     assert index["status"] == state["status"] == "playing"
+
+
+def test_the_frontend_is_served_by_this_same_app(client):
+    """The page must share an origin with the API, or the browser's own POSTs come back 403."""
+    page = client.get("/static/")
+
+    assert page.status_code == 200
+    assert page.headers["content-type"].startswith("text/html")
+    assert "<title>Minesweeper</title>" in page.text
+
+
+@pytest.mark.parametrize("asset", ["/static/index.html", "/static/style.css", "/static/app.js"])
+def test_the_frontend_files_are_reachable(client, asset):
+    assert client.get(asset).status_code == 200
+
+
+def test_the_static_mount_leaves_the_api_alone(client):
+    """/static is a mount, not a catch-all: the JSON endpoints still answer for themselves."""
+    assert client.get("/").json()["rows"] == 9
+    assert client.get("/static/nope.js").status_code == 404
 
 
 def test_server_binds_loopback_only(monkeypatch):
