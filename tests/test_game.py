@@ -7,6 +7,7 @@ from mineswooper.game import (
     EXPLODED,
     FLAGGED,
     MINE,
+    WRONG_FLAG,
     Difficulty,
     Game,
     Status,
@@ -387,6 +388,41 @@ def test_to_dict_shows_the_mines_and_the_explosion_after_a_loss(monkeypatch):
     assert snapshot["grid"][3][1] == MINE
     assert snapshot["grid"][0][0] == FLAGGED
     assert snapshot["grid"][4][4] == COVERED
+
+
+def test_to_dict_crosses_out_the_wrong_flags_after_a_loss(monkeypatch):
+    game = _corner_game(monkeypatch)
+    game.toggle_flag(0, 0)  # right: (0, 0) holds a mine
+    game.toggle_flag(4, 4)  # wrong: nothing is there
+
+    game.reveal(0, 2)
+    snapshot = game.to_dict()
+
+    assert snapshot["status"] == "lost"
+    assert snapshot["grid"][0][0] == FLAGGED
+    assert snapshot["grid"][4][4] == WRONG_FLAG
+
+
+@pytest.mark.parametrize("reveal", [None, (2, 4)])
+def test_to_dict_keeps_a_wrong_flag_secret_until_the_game_is_lost(monkeypatch, reveal):
+    """A flag is only ever disproved by the board, never by the snapshot of a live game."""
+    game = _corner_game(monkeypatch)
+    game.toggle_flag(0, 1)  # wrong, and sitting on a number the player could still work out
+
+    if reveal is not None:
+        game.reveal(*reveal)
+
+    assert game.status is Status.PLAYING
+    assert game.to_dict()["grid"][0][1] == FLAGGED
+
+
+def test_to_dict_has_no_wrong_flags_to_cross_out_after_a_win(monkeypatch):
+    game = _game(3, 3, [(0, 0)], monkeypatch=monkeypatch)
+
+    game.reveal(2, 2)  # flood-fills every safe cell, which auto-flags the mine
+
+    assert game.status is Status.WON
+    assert game.to_dict()["grid"][0][0] == FLAGGED
 
 
 def test_to_dict_is_json_serializable(monkeypatch):

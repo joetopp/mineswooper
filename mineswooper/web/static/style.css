@@ -1,0 +1,385 @@
+/* The Windows 95 look is one trick repeated: a 2px bevel over a #c0c0c0 face, white on the
+   top/left edges and #808080 on the bottom/right, reversed for anything sunken. */
+
+/* Not optional: every cell sets its own width and height, so without border-box a 16px cell
+   with a 2px bevel renders 20px wide and the grid stops lining up with its frame. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --face: #c0c0c0;
+  --light: #ffffff;
+  --shadow: #808080;
+  --dark: #000000;
+  --desktop: #008080;
+  --title: #000080;
+  --led-on: #ff0000;
+  --led-off: #3f0000;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 24px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--desktop);
+  color: var(--dark);
+  font-family: "Tahoma", "Geneva", "MS Sans Serif", "Segoe UI", sans-serif;
+  font-size: 11px;
+  /* A drag that starts on the grid is a chord or a cancelled click, never a text selection. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.window {
+  width: -moz-fit-content;
+  width: fit-content;
+  padding: 3px;
+  border: 2px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  background: var(--face);
+}
+
+/* Title bar ---------------------------------------------------------------- */
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 18px;
+  padding: 0 1px 0 2px;
+  background: var(--title);
+  color: var(--light);
+  font-weight: bold;
+}
+
+.title-bar-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+.title-bar-text {
+  flex: 1 1 auto;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+
+.title-bar-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.title-bar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 14px;
+  border: 1px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  background: var(--face);
+}
+
+.title-bar-button svg {
+  width: 9px;
+  height: 9px;
+}
+
+/* Menu bar ---------------------------------------------------------------- */
+
+.menu-bar {
+  position: relative;
+  display: flex;
+  padding: 1px 0 2px;
+}
+
+.menu-title {
+  padding: 1px 5px;
+  border: 1px solid transparent;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.menu-title[aria-expanded="true"] {
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}
+
+/* The underlined G of "Game": drawn, not an accesskey, because the menu is mouse-driven. */
+.menu-label::first-letter {
+  text-decoration: underline;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 2;
+  min-width: 124px;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  border: 2px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  background: var(--face);
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 3px 18px 3px 8px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--title);
+  color: var(--light);
+  outline: none;
+}
+
+.menu-separator {
+  height: 2px;
+  margin: 2px 1px;
+  border-top: 1px solid var(--shadow);
+  border-bottom: 1px solid var(--light);
+}
+
+/* Scoreboard and playing field -------------------------------------------- */
+
+.field {
+  padding: 5px;
+  border: 2px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  padding: 3px 4px;
+  border: 2px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}
+
+.led {
+  display: flex;
+  gap: 1px;
+  padding: 1px;
+  border: 1px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  background: var(--dark);
+}
+
+.led svg {
+  display: block;
+  width: 13px;
+  height: 23px;
+}
+
+.led .segment {
+  fill: var(--led-off);
+}
+
+.led .segment.on {
+  fill: var(--led-on);
+}
+
+.face {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  background: var(--face);
+  cursor: default;
+}
+
+.face:active {
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}
+
+.face svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 auto;
+}
+
+.grid-frame {
+  border: 3px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}
+
+.grid {
+  display: grid;
+  /* Set by app.js when the board size changes. */
+  grid-template-columns: repeat(var(--cols, 9), 16px);
+  background: var(--face);
+}
+
+/* Cells ------------------------------------------------------------------- */
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  background: var(--face);
+  font-size: 12px;
+  font-weight: bold;
+  font-family: "Tahoma", "Geneva", "MS Sans Serif", "Segoe UI", sans-serif;
+  line-height: 1;
+  cursor: default;
+}
+
+.cell svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* An open cell is flat, with 1px grid lines on the edges it shares with its neighbors. */
+.cell.open {
+  border-width: 1px 0 0 1px;
+  border-style: solid;
+  border-color: var(--shadow);
+}
+
+/* A covered cell held down looks open, which is what tells the player a chord is armed. */
+.cell.pressed {
+  border-width: 1px 0 0 1px;
+  border-style: solid;
+  border-color: var(--shadow);
+}
+
+.cell.exploded {
+  background: var(--led-on);
+}
+
+/* The canonical Minesweeper number colors. */
+.cell[data-count="1"] {
+  color: #0000ff;
+}
+
+.cell[data-count="2"] {
+  color: #008000;
+}
+
+.cell[data-count="3"] {
+  color: #ff0000;
+}
+
+.cell[data-count="4"] {
+  color: #000080;
+}
+
+.cell[data-count="5"] {
+  color: #800000;
+}
+
+.cell[data-count="6"] {
+  color: #008080;
+}
+
+.cell[data-count="7"] {
+  color: #000000;
+}
+
+.cell[data-count="8"] {
+  color: #808080;
+}
+
+/* Custom-field dialog ------------------------------------------------------ */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.modal[hidden] {
+  display: none;
+}
+
+.dialog {
+  min-width: 232px;
+}
+
+.dialog .title-bar-text {
+  padding-right: 0;
+}
+
+.dialog-body {
+  padding: 10px 8px 8px;
+}
+
+.dialog-fields {
+  display: grid;
+  grid-template-columns: auto 56px;
+  gap: 6px 8px;
+  align-items: center;
+}
+
+.dialog-fields input {
+  width: 100%;
+  padding: 2px 3px;
+  border: 2px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  background: var(--light);
+  color: var(--dark);
+  font: inherit;
+}
+
+.dialog-error {
+  margin: 8px 0 0;
+  color: #800000;
+}
+
+.dialog-error[hidden] {
+  display: none;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.button {
+  min-width: 68px;
+  padding: 4px 10px;
+  border: 2px solid;
+  border-color: var(--light) var(--shadow) var(--shadow) var(--light);
+  background: var(--face);
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.button:active {
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+}

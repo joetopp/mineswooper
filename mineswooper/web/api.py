@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import Enum
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, StrictInt
 
 from mineswooper.game import Difficulty, Game, Status
@@ -15,6 +17,8 @@ DEFAULT_DIFFICULTY = Difficulty.BEGINNER
 # A custom board is capped so that a single request cannot ask the process to allocate an
 # arbitrarily large grid. Expert is 16x30, so this leaves plenty of room.
 MAX_DIMENSION = 100
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(title="mineswooper", description="A local JSON API over a single Minesweeper game.")
 
@@ -189,3 +193,9 @@ async def reset() -> GameState:
     """Start a fresh game on the same board size."""
     game = get_game()
     return _state(set_game(Game(game.rows, game.cols, game.mine_count)))
+
+
+# The browser frontend, served by this same app on purpose. It has to share an origin with the
+# API: opened over file:// its requests are cross-origin, so every POST comes back 403 (and the
+# GETs fail outright for want of CORS headers). html=True serves /static/ as index.html.
+app.mount("/static", StaticFiles(directory=STATIC_DIR, html=True), name="static")
